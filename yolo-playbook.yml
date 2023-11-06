@@ -1,0 +1,28 @@
+---
+- hosts: localhost  #name of VM in the inventory file.
+  become: yes     # Run tasks with sudo privileges.
+  roles:
+    - common     # Include a role named 'common' 
+    - docker     # Include a role named 'docker' 
+
+  tasks:
+    - name: Check if the target directory exists
+      stat:
+        path: ~/app
+      register: dir_check
+    - name: Create the directory if it doesn't exist
+      file:
+        path: ~/app
+        state: directory
+      when: not dir_check.stat.exists 
+
+    - name: Clone the GitHub repository into the target directory
+      git:
+        repo: https://github.com/maukujnr/yolo.git
+        dest: ~/app
+
+    - name: Set up and run containers using docker-compose
+      command: docker-compose -f docker-compose.yml up -d
+      args:
+        chdir: ~/app
+

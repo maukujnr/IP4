@@ -1,0 +1,16 @@
+---
+# roles/common/tasks/main.yml
+
+- name: Update apt cache
+  apt:
+    update_cache: yes
+
+- name: Install required packages
+  apt:
+    name: "{{ item }}"
+    state: latest
+  loop:
+    - git
+    - docker.io
+    - docker-compose
+

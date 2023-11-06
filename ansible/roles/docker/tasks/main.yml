@@ -1,0 +1,9 @@
+---
+# roles/docker/tasks/main.yml
+
+- name: Ensure Docker is started and enabled
+  service:
+    name: docker
+    state: started
+    enabled: yes
+

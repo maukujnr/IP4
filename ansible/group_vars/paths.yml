@@ -1,0 +1,6 @@
+---
+# group_vars/var_group.yml
+
+# Path to your local directory where the GitHub repository will be cloned.
+local_directory: ~/app/
+

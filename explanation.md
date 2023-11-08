@@ -1,153 +1,193 @@
-# Explanation of a Docker Containerization Project -IP2
+# Deploying Project Yolo on Kubernetes -IP4
 
-## Objective 1: Choice of Base Image
+## Intro
 
-For the web application container, I chose the official Node.js image (node:14) as it's compatible with the application's stack.
-I use smaller base images (node:14-slim and node:14-alpine) to reduce the image sizes.
+This application is implemnted using three components namely, a front-end (client), a backend (backed) and a database to help persist the data. 
+This page provides a quick overview of how to deploy this application on Kubernetes. All the necessary files to successfully deploy on a kubernetes cluster are included in the kubernetes folder within this projects root directory.
 
-Dockerfile for the web/client application container:
-For the client, we copy only the build/ directory to the production image, which contains the compiled output. We will create a separate production build in the first stage and then copy the resulting build files to the second stage
+## Objective 1: Choice of Kubernetes Objects
 
-```Dockerfile
-# Use an official Node.js runtime as a build environment
-FROM node:14-slim as build
+The choice of Kubernetes objects for deployment depends on the application's requirements and architecture. For this application we are using:
 
-# Set the working directory for the build stage
-WORKDIR /app
+### Deployments for the backend and client components.
+#### Why?
 
-# Copy package.json and package-lock.json for dependency installation
-COPY package*.json ./
+Deployments are suitable for stateless applications that can easily scale horizontally. A deployment will manage the creation and management of ReplicaSets and pods, ensuring high availability and updates without downtime.
 
-# Install dependencies
-RUN npm install
-
-# Copy the client application code to the working directory
-COPY . .
-
-# Build the client application
-RUN npm run build
-
-# Use a smaller base image for the production stage
-FROM nginx:alpine
-
-# Copy the build output from the build stage
-COPY --from=build /app/build /usr/share/nginx/html
-
-# Expose port 80
-EXPOSE 80
+#### frontend app deployment manifest
 ```
-
-For the backend application container, we install only production dependencies and copy only necessary files.
-We expose the required ports (80 for the client, 5000 for the backend).
-
-```Dockerfile
-# Use a smaller base image with Node.js
-FROM node:14-slim as build
-
-# Set the working directory for the build stage
-WORKDIR /app
-
-# Copy package.json and package-lock.json for dependency installation
-COPY package*.json ./
-
-# Install dependencies
-RUN npm install --production
-
-# Copy the rest of the backend application code
-COPY . .
-
-# Use a smaller base image for the production stage
-FROM node:14-alpine
-
-# Set the working directory for the production stage
-WORKDIR /app
-
-# Copy only the necessary files from the build stage
-COPY --from=build /app ./
-
-# Expose the port (adjust to your application's port)
-EXPOSE 5000
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client-deployment  # Specify the name of the deployment
+spec:
+  replicas: 3  # Set the desired number of pod replicas
+  selector:
+    matchLabels:
+      app: client  # Define the label selector to match pods with the label 'app: client'
+  template:
+    metadata:
+      labels:
+        app: client  # Label the pods created by this deployment with 'app: client'
+    spec:
+      containers:
+      - name: client  # Assign a name to the container
+        image: maukujnr/yolo-client-image:v1.1  # Specify the Docker image and version
+        resources:
+          requests:
+            memory: "64Mi"  # Define the minimum memory request for the container
+            cpu: "250m"  # Define the minimum CPU request for the container
+          limits:
+            memory: "128Mi"  # Set the maximum memory limit for the container
+            cpu: "500m"  # Set the maximum CPU limit for the container
+        ports:
+        - containerPort: 3000  # Define the port on which the container will listen
 ```
-
-A docker-compose file is provided with the following contents:
-
-```docker-compose.yml
-
-version: '3'
-services:
-  client:
-    build:
-      context: client
-    ports:
-      - "80:3000"
-    depends_on:
-      - backend
-
-  backend:
-    build:
-      context: backend
-    ports:
-      - "5000:5000"
-    environment:
-      MONGO_URI: mongodb://mongo:27017/yolomy
-    depends_on:
-      - mongo
-
-  mongo:
-    image: mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
-
-volumes:
-  mongo-data:
+#### backend app deployment manifest
 
 ```
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend-deployment  # Specify the name of the deployment
+spec:
+  replicas: 3  # Set the desired number of pod replicas
+  selector:
+    matchLabels:
+      app: backend  # Define the label selector to match pods with the label 'app: backend'
+  template:
+    metadata:
+      labels:
+        app: backend  # Label the pods created by this deployment with 'app: backend'
+    spec:
+      containers:
+      - name: backend  # Assign a name to the container
+        image: maukujnr/yolo-backend-image:v1.1  # Specify the Docker image and version
+        resources:
+          requests:
+            memory: "64Mi"  # Define the minimum memory request for the container
+            cpu: "250m"  # Define the minimum CPU request for the container
+          limits:
+            memory: "128Mi"  # Set the maximum memory limit for the container
+            cpu: "500m"  # Set the maximum CPU limit for the container
+        ports:
+        - containerPort: 8080  # Define the port on which the container will listen
+```
+### Statefulset for the database component.
+#### Why?
 
-## Getting Started
+StatefulSets are ideal for applications that require stable network identifiers and persistent storage. 
 
-1. Clone this repository to your local machine.
-
-```bash
-git clone https://github.com/maukujnr/yolo.git
+The use of StatefulSets is recommended for our application to ensure persistent storage. It will allow you to maintain a unique identity for each pod, which is essential for our database. 
 
 ```
-2. Navigate to the repository directory.
-```bash
-cd yolo
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb-statefulset  # Name of the StatefulSet for MongoDB
+spec:
+  serviceName: mongodb  # Headless service for stable network identities
+  replicas: 1  # Number of MongoDB pods
+  selector:
+    matchLabels:
+      app: mongodb  # Label selector for MongoDB pods
+  template:
+    metadata:
+      labels:
+        app: mongodb  # Label for MongoDB pods
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:latest  # Docker image for MongoDB
+        ports:
+        - containerPort: 27017  # Port for MongoDB
+        volumeMounts:
+        - name: mongodb-storage
+          mountPath: /data/db  # Mount path for MongoDB data
 ```
-3. Run the application using Docker Compose.
 
-```bash
-docker-compose up -d
+### The following section defines the Services for the frontend and backend apps
+##### Front-end
+```front-end app service
+apiVersion: v1
+kind: Service
+metadata:
+  name: client-service  # Specify the name of the service
+spec:
+  selector:
+    app: client  # Define the label selector to route traffic to pods with the label 'app: client'
+  ports:
+    - protocol: TCP
+      port: 80  # Define the port through which the service will be accessed
+      targetPort: 3000  # Specify the target port on the pods where traffic will be forwarded
+  type: LoadBalancer  # Use a LoadBalancer service type to expose the service to the internet
 ```
-4. You can access the Yolo application in your web browser:
-
-Client: http://localhost:3000
-Backend: http://localhost:5000
-MongoDB is already configured for the Backend container.
-
-
-### IP3 Explanation
-To run this application, a vagrant configuration and an ansibleplaybook is provided at the root of this repo. You can follow the following steps:
-1. make sure you have Vagrant installed on your PC/MAC
-2. Clone the Yolo repository:
-```bash
-git clone https://github.com/maukujnr/yolo.git
+##### Backend
+```backend app service
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-service  # Specify the name of the service
+spec:
+  selector:
+    app: backend  # Define the label selector to route traffic to pods with the label 'app: backend'
+  ports:
+    - protocol: TCP
+      port: 80  # Define the port through which the service will be accessed
+      targetPort: 8080  # Specify the target port on the pods where traffic will be forwarded
+  type: LoadBalancer  # Use a LoadBalancer service type to expose the service to the internet
 ```
-3. Change your working directory to the cloned repository:
-
-```bash
-cd yolo
+##### Database
 ```
-4. Use Vagrant to start and provision the virtual machine:
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service  # Specify the name of the service
+spec:
+  selector:
+    app: mongodb  # Define the label selector to route traffic to pods with the label 'app: mongodb'
+  ports:
+    - protocol: TCP
+      port: 27017  # Define the port through which the service will be accessed
+      targetPort: 27017  # Specify the target port on the pods where traffic will be forwarded
+  type: ClusterIP  # Use a ClusterIP service type for internal access within the cluster
 
-```bash
-vagrant up
-```
-#NB: When Vagrant is installed on the Windows system, the version installed within the Linux distribution must match.
-By default Vagrant will not access features available on the Windows system from within the WSL. This means the VirtualBox and Hyper-V providers will not be available. To enable Windows access, which will also enable the VirtualBox and Hyper-V providers, set the ``VAGRANT_WSL_ENABLE_WINDOWS_ACCESS`` environment variable:
-``
- export VAGRANT_WSL_ENABLE_WINDOWS_ACCESS="1"
- ``
+  ```
+
+### Storage Option
+
+A Persistent Volume Claim (PVC) is is required so as to request a storage volume (PV) to store the database data.
+
+A Persistent Volume (PV) provides a standardized way to manage and allocate storage resources in a Kubernetes cluster, ensuring that the applications have access to the storage they need in a reliable and consistent manner. It's claimed by pods using Persistent Volume Claims (PVCs).
+
+### The following section defines the storage objects required by the app in this repo
+
+  ```Persistent Volume Claim (PVC) for MongoDB data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mongodb-pvc  # Name of the PVC for MongoDB data
+spec:
+  accessModes:
+    - ReadWriteOnce  # Access mode for the PVC
+  resources:
+    requests:
+      storage: 1Gi  # Storage size for MongoDB data
+  ```
+  
+  ```Persistent Volume (PV) for MongoDB data
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mongodb-pv  # Name of the PV for MongoDB data
+spec:
+  capacity:
+    storage: 1Gi  # Storage size for the PV
+  accessModes:
+    - ReadWriteOnce  # Access mode for the PV
+  persistentVolumeReclaimPolicy: Retain  # Reclaim policy for the PV
+  hostPath:
+    path: /your/host/path  # Host path for the PV
+
+  ```
+Please make sure to create the PV and PVC with appropriate settings on your own Kubernetes cluster. This will ensure your MongoDB data is stored persistently.

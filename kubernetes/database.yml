@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongodb-statefulset  # Name of the StatefulSet for MongoDB
+spec:
+  serviceName: mongodb  # Headless service for stable network identities
+  replicas: 1  # Number of MongoDB pods
+  selector:
+    matchLabels:
+      app: mongodb  # Label selector for MongoDB pods
+  template:
+    metadata:
+      labels:
+        app: mongodb  # Label for MongoDB pods
+    spec:
+      containers:
+      - name: mongodb
+        image: mongo:latest  # Docker image for MongoDB
+        ports:
+        - containerPort: 27017  # Port for MongoDB
+        volumeMounts:
+        - name: mongodb-storage
+          mountPath: /data/db  # Mount path for MongoDB data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongodb-service  # Specify the name of the service
+spec:
+  selector:
+    app: mongodb  # Define the label selector to route traffic to pods with the label 'app: mongodb'
+  ports:
+    - protocol: TCP
+      port: 27017  # Define the port through which the service will be accessed
+      targetPort: 27017  # Specify the target port on the pods where traffic will be forwarded
+  type: ClusterIP  # Use a ClusterIP service type for internal access within the cluster

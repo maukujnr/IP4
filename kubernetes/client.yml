@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client-deployment  # Define the name of the deployment
+spec:
+  replicas: 3  # Specify the desired number of pod replicas
+  selector:
+    matchLabels:
+      app: client  # Label selector to match pods with the label 'app: client'
+  template:
+    metadata:
+      labels:
+        app: client  # Label pods created by this deployment with 'app: client'
+    spec:
+      containers:
+      - name: client  # Assign a name to the container
+        image: maukujnr/yolo-client-image:v1.1  # Specify the Docker image and version
+        env:  # Add hardcoded MongoDB host and port
+        - name: MONGODB_HOST
+          value: mongodb-service  # Service name for MongoDB
+        - name: MONGODB_PORT
+          value: "27017"  # MongoDB port
+        resources:
+          requests:
+            memory: "64Mi"  # Define the minimum memory request for the container
+            cpu: "250m"  # Define the minimum CPU request for the container
+          limits:
+            memory: "128Mi"  # Set the maximum memory limit for the container
+            cpu: "500m"  # Set the maximum CPU limit for the container
+        ports:
+        - containerPort: 3000  # Define the port on which the container will listen
+
+# The following section defines the Service for the client
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: client-service  # Specify the name of the service
+spec:
+  selector:
+    app: client  # Define the label selector to route traffic to pods with the label 'app: client'
+  ports:
+    - protocol: TCP
+      port: 80  # Define the port through which the service will be accessed
+      targetPort: 3000  # Specify the target port on the pods where traffic will be forwarded
+  type: LoadBalancer  # Use a LoadBalancer service type to expose the service to the internet

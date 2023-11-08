@@ -19,20 +19,25 @@ Deployments are suitable for stateless applications that can easily scale horizo
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: client-deployment  # Specify the name of the deployment
+  name: client-deployment  # Define the name of the deployment
 spec:
-  replicas: 3  # Set the desired number of pod replicas
+  replicas: 3  # Specify the desired number of pod replicas
   selector:
     matchLabels:
-      app: client  # Define the label selector to match pods with the label 'app: client'
+      app: client  # Label selector to match pods with the label 'app: client'
   template:
     metadata:
       labels:
-        app: client  # Label the pods created by this deployment with 'app: client'
+        app: client  # Label pods created by this deployment with 'app: client'
     spec:
       containers:
       - name: client  # Assign a name to the container
         image: maukujnr/yolo-client-image:v1.1  # Specify the Docker image and version
+        env:  # Add hardcoded MongoDB host and port
+        - name: MONGODB_HOST
+          value: mongodb-service  # Service name for MongoDB
+        - name: MONGODB_PORT
+          value: "27017"  # MongoDB port
         resources:
           requests:
             memory: "64Mi"  # Define the minimum memory request for the container
@@ -42,6 +47,7 @@ spec:
             cpu: "500m"  # Set the maximum CPU limit for the container
         ports:
         - containerPort: 3000  # Define the port on which the container will listen
+
 ```
 #### backend app deployment manifest
 
@@ -63,6 +69,11 @@ spec:
       containers:
       - name: backend  # Assign a name to the container
         image: maukujnr/yolo-backend-image:v1.1  # Specify the Docker image and version
+        env:  # Add hardcoded MongoDB host and port
+        - name: MONGODB_HOST
+          value: mongodb-service  # Service name for MongoDB
+        - name: MONGODB_PORT
+          value: "27017"  # MongoDB port
         resources:
           requests:
             memory: "64Mi"  # Define the minimum memory request for the container
@@ -72,6 +83,7 @@ spec:
             cpu: "500m"  # Set the maximum CPU limit for the container
         ports:
         - containerPort: 8080  # Define the port on which the container will listen
+
 ```
 ### Statefulset for the database component.
 #### Why?

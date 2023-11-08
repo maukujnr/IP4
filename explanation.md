@@ -5,7 +5,7 @@
 This application is implemnted using three components namely, a front-end (client), a backend (backed) and a database to help persist the data. 
 This page provides a quick overview of how to deploy this application on Kubernetes. All the necessary files to successfully deploy on a kubernetes cluster are included in the kubernetes folder within this projects root directory.
 
-## Objective 1: Choice of Kubernetes Objects
+## Choice of Kubernetes Objects
 
 The choice of Kubernetes objects for deployment depends on the application's requirements and architecture. For this application we are using:
 

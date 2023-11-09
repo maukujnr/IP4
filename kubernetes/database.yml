@@ -20,7 +20,13 @@ spec:
         - containerPort: 27017  # Port for MongoDB
         volumeMounts:
         - name: mongodb-storage
-          mountPath: /data/db  # Mount path for MongoDB data
+          mountPath: /data/db  # Mount path for MongoDB data within the pod created 
+      #The volumes section below defines the volume to be used in the pod
+      volumes:
+      - name: mongodb-storage
+        persistentVolumeClaim:
+          claimName: mongodb-pvc  # Name of the PVC defined for MongoDB. The PVC points to the PV name nder volume
+
 ---
 apiVersion: v1
 kind: Service

@@ -7,4 +7,5 @@ spec:
     - ReadWriteOnce  # Access mode for the PVC
   resources:
     requests:
-      storage: 1Gi  # Storage size for MongoDB data
+      storage: 1Gi  # Storage size for MongoDB data volume
+  volumeName: mongodb-pv  # Link the PVC to the mongodb-pv PV by name

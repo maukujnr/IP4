@@ -9,4 +9,4 @@ spec:
     - ReadWriteOnce  # Access mode for the PV
   persistentVolumeReclaimPolicy: Retain  # Reclaim policy for the PV
   hostPath:
-    path: /data/mongodb  # Host path for the PV
+    path: /data/mongodb  # Host path for the PV. This should be used by the database statefulset 

@@ -2,8 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: client-deployment  # Define the name of the deployment
+  namespace: yolo-app  # Add the namespace
 spec:
-  replicas: 3  # Specify the desired number of pod replicas
+  replicas: 1  # Specify the desired number of pod replicas
   selector:
     matchLabels:
       app: client  # Label selector to match pods with the label 'app: client'
@@ -37,6 +38,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: client-service  # Specify the name of the service
+  namespace: yolo-app  # Add the namespace
 spec:
   selector:
     app: client  # Define the label selector to route traffic to pods with the label 'app: client'

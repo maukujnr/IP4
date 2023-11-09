@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+name: mongodb-pv  # Name of the PV for MongoDB data
+spec:
+capacity:
+  storage: 1Gi  # Storage size for the PV
+accessModes:
+  - ReadWriteOnce  # Access mode for the PV
+persistentVolumeReclaimPolicy: Retain  # Reclaim policy for the PV
+hostPath:
+  path: /your/host/path  # Host path for the PV

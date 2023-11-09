@@ -115,7 +115,12 @@ spec:
         - containerPort: 27017  # Port for MongoDB
         volumeMounts:
         - name: mongodb-storage
-          mountPath: /data/db  # Mount path for MongoDB data
+          mountPath: /data/db  # Mount path for MongoDB data within the pod created 
+      #The volumes section below defines the volume to be used in the pod
+      volumes:
+      - name: mongodb-storage
+        persistentVolumeClaim:
+          claimName: mongodb-pvc  # Name of the PVC defined for MongoDB. The PVC points to the PV name nder volume
 ```
 
 ### The following section defines the Services for the frontend and backend apps
@@ -184,7 +189,8 @@ spec:
     - ReadWriteOnce  # Access mode for the PVC
   resources:
     requests:
-      storage: 1Gi  # Storage size for MongoDB data
+      storage: 1Gi  # Storage size for MongoDB data volume
+  volumeName: mongodb-pv  # Link the PVC to the mongodb-pv PV by name
   ```
   
   ```Persistent Volume (PV) for MongoDB data
@@ -199,7 +205,8 @@ spec:
     - ReadWriteOnce  # Access mode for the PV
   persistentVolumeReclaimPolicy: Retain  # Reclaim policy for the PV
   hostPath:
-    path: /your/host/path  # Host path for the PV
+    path: /data/mongodb  # Host path for the PV. This should be used by the database statefulset if the volume section in the database statefulset defines a hostPath
+
 
   ```
 Please make sure to create the PV and PVC with appropriate settings on your own Kubernetes cluster. This will ensure your MongoDB data is stored persistently.
